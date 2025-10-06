@@ -5,13 +5,15 @@ import shap
 import matplotlib
 import matplotlib.pyplot as plt
 import streamlit.components.v1 as components
+from matplotlib import font_manager
 
 # ------------------ 页面配置 ------------------
 st.set_page_config(page_title="行走步态-膝关节接触力预测", layout="wide")
 
 # ------------------ 中文字体 + 负号 ------------------
-# 设置全局字体为支持中文的字体
-matplotlib.rcParams['font.sans-serif'] = ['Microsoft YaHei', 'SimHei', 'Arial Unicode MS']
+# 优先使用微软雅黑
+font_path = font_manager.findfont('Microsoft YaHei', fallback_to_default=True)
+matplotlib.rcParams['font.sans-serif'] = ['Microsoft YaHei']
 matplotlib.rcParams['axes.unicode_minus'] = False  # 解决负号显示问题
 
 # ------------------ 页面标题 ------------------
@@ -44,7 +46,7 @@ with col2:
         st.markdown(f"<p style='font-size:16px'>{name}</p>", unsafe_allow_html=True)
         if name == "性别":
             val = st.radio("", [0,1], key=name, help="0:女性,1:男性")
-        elif name == "年龄":  # 特别处理年龄输入
+        elif name == "年龄":
             val = st.number_input("", value=30, step=1, format="%d", key=name)
         else:
             val = st.number_input("", value=0.0, step=0.1, format="%.2f", key=name)
@@ -65,7 +67,6 @@ with col2:
 with col3:
     explainer = shap.TreeExplainer(model)
     shap_values = explainer(X_input)
-
     shap_expl = shap.Explanation(
         values=shap_values.values[0],
         base_values=shap_values.base_values[0],
@@ -77,6 +78,8 @@ with col3:
     st.markdown("<h3 style='color:darkorange;'>特征影响分析（瀑布图）</h3>", unsafe_allow_html=True)
     fig1, ax1 = plt.subplots(figsize=(6,6))
     shap.plots.waterfall(shap_expl, show=False)
+    # 强制标题中文显示
+    plt.title("特征影响瀑布图", fontproperties=font_manager.FontProperties(fname=font_path), fontsize=14)
     plt.tight_layout()
     st.pyplot(fig1)
 
@@ -89,4 +92,5 @@ with col3:
         feature_names=feature_names,
         matplotlib=False  # 使用HTML渲染
     )
-    components.html(shap.getjs() + force_plot.html(), height=400) 
+    components.html(shap.getjs() + force_plot.html(), height=400)
+
