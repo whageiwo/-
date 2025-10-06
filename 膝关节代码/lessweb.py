@@ -11,7 +11,7 @@ from matplotlib import font_manager
 st.set_page_config(page_title="行走步态-膝关节接触力预测", layout="wide")
 
 # ------------------ 中文字体 + 负号 ------------------
-# 使用微软雅黑，保证中英文及负号显示正常
+# 使用微软雅黑
 font_path = font_manager.findfont('Microsoft YaHei', fallback_to_default=True)
 prop = font_manager.FontProperties(fname=font_path)
 matplotlib.rcParams['font.sans-serif'] = ['Microsoft YaHei']
@@ -75,16 +75,22 @@ with col3:
         feature_names=feature_names
     )
 
-    # 瀑布图
+    # 瀑布图（使用 waterfall_legacy 解决中文 + f(x)）
     st.markdown("<h3 style='color:darkorange;'>特征影响分析（瀑布图）</h3>", unsafe_allow_html=True)
     fig1, ax1 = plt.subplots(figsize=(6,6))
-    shap.plots.waterfall(shap_expl, show=False)
 
-    # 修复中文显示 + 保留 f(x)
+    shap.plots._waterfall.waterfall_legacy(
+        expected_value=shap_expl.base_values,
+        shap_values=shap_expl.values,
+        features=shap_expl.data,
+        feature_names=shap_expl.feature_names,
+        max_display=20,
+        show=False
+    )
+
+    # 修复中文字体
     for txt in ax1.texts:
         txt.set_fontproperties(prop)
-    if hasattr(ax1, 'set_title'):
-        ax1.set_title(ax1.get_title(), fontproperties=prop, fontsize=14)
 
     plt.tight_layout()
     st.pyplot(fig1)
@@ -99,4 +105,6 @@ with col3:
         matplotlib=False
     )
     components.html(shap.getjs() + force_plot.html(), height=400)
+
+
 
