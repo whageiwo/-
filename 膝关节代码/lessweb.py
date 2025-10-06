@@ -101,7 +101,7 @@ with col3:
 
     # ---------------- 瀑布图 ----------------
     st.markdown("<h3 style='color:darkorange;'>瀑布图</h3>", unsafe_allow_html=True)
-    plt.figure(figsize=(12,6))
+    plt.figure(figsize=(6,6))
     shap.plots.waterfall(
         shap_expl,
         show=False,
@@ -127,4 +127,5 @@ with col3:
         f"<head>{shap.getjs()}</head>{force_plot.html()}",
         height=350
     )
+
 
