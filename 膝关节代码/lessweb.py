@@ -55,24 +55,32 @@ with col2:
     st.markdown(f"<h3 style='color:darkgreen;'>预测结果</h3>", unsafe_allow_html=True)
     st.markdown(f"<p style='color:blue; font-size:40px; font-weight:bold;'>膝关节接触力: {pred:.2f}</p>", unsafe_allow_html=True)
 
-# -------- SHAP 可视化（完全使用默认设置）--------
+# -------- SHAP 可视化（使用默认字体）--------
 with col3:
     explainer = shap.TreeExplainer(model)
     shap_values = explainer(X_input)
 
-    # 瀑布图 - 完全使用SHAP默认设置
+    shap_expl = shap.Explanation(
+        values=shap_values.values[0],
+        base_values=shap_values.base_values[0],
+        data=X_input[0],
+        feature_names=feature_names
+    )
+
+    # 瀑布图
     st.markdown("<h3 style='color:darkorange;'>特征影响分析（瀑布图）</h3>", unsafe_allow_html=True)
     
-    # 方法1：使用SHAP内置的显示功能
+    # 创建图形（完全使用默认设置）
     fig, ax = plt.subplots(figsize=(10, 6))
     
-    # 完全使用SHAP默认设置，不做任何修改
-    shap.plots.waterfall(shap_values[0], show=False)
+    # 直接绘制SHAP瀑布图，不做任何修改
+    shap.plots.waterfall(shap_expl, show=False)
     
-    # 直接显示，不做任何后处理
+    # 不设置任何字体，使用系统默认
+    plt.tight_layout()
     st.pyplot(fig)
 
-    # 力图 - 也使用默认设置
+    # 力图
     st.markdown("<h3 style='color:purple;'>决策力图示</h3>", unsafe_allow_html=True)
     force_plot = shap.force_plot(
         explainer.expected_value,
@@ -83,4 +91,7 @@ with col3:
     )
     components.html(shap.getjs() + force_plot.html(), height=400)
 
-
+# 调试信息
+st.sidebar.markdown("### 图表状态")
+st.sidebar.write(f"预测值: {pred:.2f}")
+st.sidebar.write(f"基准值: {shap_values.base_values[0]:.3f}")
