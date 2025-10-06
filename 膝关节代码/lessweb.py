@@ -13,18 +13,22 @@ st.set_page_config(page_title="行走步态-膝关节接触力预测", layout="w
 
 # ------------------ 中文字体设置（仅使用SimHei）------------------
 try:
+    # 字体路径设置
     font_path = os.path.join(os.path.dirname(__file__), "SimHei.ttf")
+    
     if os.path.exists(font_path):
+        # 注册并强制使用SimHei字体
         font_prop = font_manager.FontProperties(fname=font_path)
         font_manager.fontManager.addfont(font_path)
         plt.rcParams['font.family'] = 'SimHei'
         st.success("SimHei字体加载成功")
     else:
         st.error("未找到SimHei.ttf字体文件，请确保文件存在")
-        plt.rcParams['font.family'] = 'SimHei'
+        plt.rcParams['font.family'] = 'SimHei'  # 仍然尝试使用
+    
 except Exception as e:
     st.error(f"字体加载失败: {str(e)}")
-    plt.rcParams['font.family'] = 'SimHei'
+    plt.rcParams['font.family'] = 'SimHei'  # 强制回退尝试
 
 plt.rcParams['axes.unicode_minus'] = False  # 解决负号显示问题
 
@@ -87,7 +91,7 @@ with col3:
         feature_names=feature_names
     )
 
-    # 瀑布图
+    # ----------- 瀑布图部分（修正版） -----------
     st.markdown("<h3 style='color:darkorange;'>特征影响分析（瀑布图）</h3>", unsafe_allow_html=True)
 
     plt.rcParams.update({
@@ -103,18 +107,18 @@ with col3:
     fig, ax = plt.subplots(figsize=(10, 6))
     shap.plots.waterfall(shap_expl, show=False, max_display=10)
 
-    # 🔧 修复顶部预测值重影：去掉重复的预测值文字
+    # ✅ 删除顶部重复预测值（重影问题核心修复）
     texts = ax.findobj(match=plt.Text)
-    seen = set()
+    fx_texts = [t for t in texts if "f(x)" in t.get_text()]
+    if len(fx_texts) > 1:
+        for t in fx_texts[1:]:
+            t.set_visible(False)
+    ax.set_title("")  # 删除可能的标题层
+
+    # ✅ 统一字体，修复中文与负号
     for text in texts:
-        content = text.get_text()
-        if "f(x)" in content:
-            if content in seen:
-                text.set_visible(False)
-            else:
-                seen.add(content)
-        # 同时统一字体
         text.set_fontproperties(font_manager.FontProperties(family='SimHei', size=12))
+    plt.rcParams['axes.unicode_minus'] = False
 
     plt.tight_layout(pad=2.5)
     st.pyplot(fig)
