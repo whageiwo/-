@@ -3,10 +3,15 @@ import joblib
 import numpy as np
 import shap
 import matplotlib.pyplot as plt
+import matplotlib
 import streamlit.components.v1 as components
 
 # ------------------ 页面配置 ------------------
 st.set_page_config(page_title="数据图表分析", layout="wide")
+
+# ------------------ 中文字体 + 负号 ------------------
+matplotlib.rcParams['font.sans-serif'] = ['Microsoft YaHei']  # 微软雅黑
+matplotlib.rcParams['axes.unicode_minus'] = False  # 负号显示正常
 
 # ------------------ 页面标题 ------------------
 st.markdown("<h1 style='text-align: center; color: darkred; margin-bottom: 30px;'>数据图表分析平台</h1>", unsafe_allow_html=True)
@@ -49,18 +54,16 @@ X_input = np.array([inputs])
 # -------- 预测结果 --------
 pred = model.predict(X_input)[0]
 
-# 显示预测值
 with col2:
     st.markdown("<hr>", unsafe_allow_html=True)
     st.markdown(f"<h3 style='color:darkgreen;'>预测结果</h3>", unsafe_allow_html=True)
     st.markdown(f"<p style='color:blue; font-size:40px; font-weight:bold;'>预测值: {pred:.2f}</p>", unsafe_allow_html=True)
 
-# -------- SHAP 可视化（根据图片样式）--------
+# -------- SHAP 可视化 --------
 with col3:
     explainer = shap.TreeExplainer(model)
     shap_values = explainer(X_input)
 
-    # 创建SHAP解释对象
     shap_expl = shap.Explanation(
         values=shap_values.values[0],
         base_values=shap_values.base_values[0],
@@ -68,16 +71,12 @@ with col3:
         feature_names=feature_names
     )
 
-    # 瀑布图
     st.markdown("<h3 style='color:darkorange;'>特征影响分析（瀑布图）</h3>", unsafe_allow_html=True)
-    
-    # 创建图形（根据图片尺寸调整）
-    fig, ax = plt.subplots(figsize=(8, 8))
-    
-    # 绘制SHAP瀑布图（使用默认设置）
+    fig, ax = plt.subplots(figsize=(8,8))
+
+    # 绘制SHAP瀑布图（保留默认base value，不重复显示）
     shap.plots.waterfall(shap_expl, show=False)
-    
-    # 显示图形
+
     plt.tight_layout()
     st.pyplot(fig)
 
@@ -92,9 +91,10 @@ with col3:
     )
     components.html(shap.getjs() + force_plot.html(), height=400)
 
-# 调试信息
+# ------------------ 调试信息 ------------------
 st.sidebar.markdown("### 图表信息")
 st.sidebar.write(f"预测值: {pred:.2f}")
 st.sidebar.write(f"基准值: {shap_values.base_values[0]:.2f}")
+
 
 
