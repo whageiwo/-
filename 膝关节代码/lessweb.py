@@ -86,32 +86,31 @@ with col3:
         feature_names=feature_names
     )
 
-  # 瀑布图（修复重影版本）
-st.markdown("<h3 style='color:darkorange;'>特征影响分析（瀑布图）</h3>", unsafe_allow_html=True)
-
+  # 瀑布图（带字体大小设置）
 fig, ax = plt.subplots(figsize=(6, 6))
 shap.plots.waterfall(shap_expl, show=False)
 
-# 修复重影的核心代码：移除重复文本
-seen_texts = set()
-for text in ax.findobj(match=plt.Text):
-    txt = text.get_text()
-    if txt in seen_texts:
-        text.set_visible(False)  # 隐藏重复文本
-    else:
-        seen_texts.add(txt)
-        # 统一设置字体属性
+# 设置不同元素的字体大小
+for item in ax.findobj(match=plt.Text):
+    try:
         if os.path.exists(font_path):
-            text.set_fontproperties(font_manager.FontProperties(
-                fname=font_path,
-                size=10
-            ))
+            font_prop = font_manager.FontProperties(fname=font_path)
+            item.set_fontproperties(font_prop)
+        
+        # 根据文本类型设置不同大小
+        if item.get_text() in feature_names:  # 特征名称
+            item.set_fontsize(10)
+        elif "=" in item.get_text():  # 特征值
+            item.set_fontsize(9)
+        elif "→" in item.get_text():  # 箭头说明
+            item.set_fontsize(8)
+        else:  # 其他文本
+            item.set_fontsize(10)
+    except:
+        pass
 
 plt.tight_layout()
 st.pyplot(fig)
-    
-    plt.tight_layout()
-    st.pyplot(fig)
 
     # 力图 - 使用HTML渲染方式
     st.markdown("<h3 style='color:purple;'>决策力图示</h3>", unsafe_allow_html=True)
@@ -128,4 +127,5 @@ st.pyplot(fig)
 st.sidebar.markdown("### 字体状态检查")
 st.sidebar.write(f"字体路径: {font_path if 'font_path' in locals() else '未设置'}")
 st.sidebar.write(f"当前字体: {plt.rcParams['font.family']}")
+
 
