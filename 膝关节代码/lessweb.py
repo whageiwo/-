@@ -2,33 +2,11 @@ import streamlit as st
 import joblib
 import numpy as np
 import shap
-import matplotlib
 import matplotlib.pyplot as plt
 import streamlit.components.v1 as components
-import os
-from matplotlib import font_manager
 
 # ------------------ 页面配置 ------------------
 st.set_page_config(page_title="行走步态-膝关节接触力预测", layout="wide")
-
-# ------------------ 中文字体设置（修复乱码）------------------
-# 关键修复：确保中文字体正确加载
-try:
-    # 方法1：使用系统字体
-    plt.rcParams['font.sans-serif'] = ['Microsoft YaHei', 'SimHei', 'Arial Unicode MS']
-    plt.rcParams['font.family'] = 'sans-serif'
-    plt.rcParams['axes.unicode_minus'] = True  # 保留负号
-    
-    # 方法2：如果系统字体不可用，尝试加载本地字体
-    font_path = os.path.join(os.path.dirname(__file__), "SimHei.ttf")
-    if os.path.exists(font_path):
-        font_prop = font_manager.FontProperties(fname=font_path)
-        font_manager.fontManager.addfont(font_path)
-        plt.rcParams['font.family'] = font_prop.get_name()
-        st.success("自定义字体加载成功")
-        
-except Exception as e:
-    st.error(f"字体加载失败: {str(e)}")
 
 # ------------------ 页面标题 ------------------
 st.markdown("<h1 style='text-align: center; color: darkred; margin-bottom: 30px;'>行走步态-膝关节接触力预测</h1>", unsafe_allow_html=True)
@@ -77,7 +55,7 @@ with col2:
     st.markdown(f"<h3 style='color:darkgreen;'>预测结果</h3>", unsafe_allow_html=True)
     st.markdown(f"<p style='color:blue; font-size:40px; font-weight:bold;'>膝关节接触力: {pred:.2f}</p>", unsafe_allow_html=True)
 
-# -------- SHAP 可视化（彻底修复所有问题）--------
+# -------- SHAP 可视化（最简版本）--------
 with col3:
     explainer = shap.TreeExplainer(model)
     shap_values = explainer(X_input)
@@ -89,90 +67,16 @@ with col3:
         feature_names=feature_names
     )
 
-    # 瀑布图
+    # 瀑布图 - 最简版本
     st.markdown("<h3 style='color:darkorange;'>特征影响分析（瀑布图）</h3>", unsafe_allow_html=True)
     
-    # >>>>>>> 彻底修复开始 <<<<<<<
-    # 1. 创建图形
-    fig, ax = plt.subplots(figsize=(10, 6), dpi=150)
+    # 创建图形
+    fig, ax = plt.subplots(figsize=(10, 6))
     
-    # 2. 绘制SHAP瀑布图
+    # 直接绘制SHAP瀑布图，不做任何修改
     shap.plots.waterfall(shap_expl, show=False)
     
-    # 3. 修复中文乱码：强制设置所有文本字体
-    for text in ax.findobj(match=plt.Text):
-        try:
-            # 强制使用中文字体
-            text.set_fontproperties(font_manager.FontProperties(
-                family='Microsoft YaHei',
-                size=12
-            ))
-        except:
-            continue
-    
-    # 4. 修复横坐标数值多余正号问题
-    # 移除X轴数值的正号，只保留负号
-    ax.xaxis.set_major_formatter(plt.FuncFormatter(lambda x, p: f'{x:.1f}'))
-    
-    # 5. 删除所有重叠数字
-    seen_positions = {}
-    texts_to_remove = []
-    
-    for text in ax.findobj(match=plt.Text):
-        if text.get_visible():
-            pos = text.get_position()
-            content = text.get_text().strip()
-            
-            # 创建位置标识（四舍五入到小数点后2位）
-            pos_key = (round(pos[0], 2), round(pos[1], 2))
-            
-            # 如果同一位置已经有文本，标记为删除
-            if pos_key in seen_positions:
-                texts_to_remove.append(text)
-            else:
-                seen_positions[pos_key] = text
-    
-    # 隐藏重叠文本
-    for text in texts_to_remove:
-        text.set_visible(False)
-    
-    # 6. 特别处理数值文本，确保格式正确
-    for text in ax.findobj(match=plt.Text):
-        if text.get_visible():
-            content = text.get_text().strip()
-            
-            # 处理数值文本：移除多余的正号
-            if any(char.isdigit() for char in content):
-                # 移除数值前的正号，保留负号
-                if content.startswith('+'):
-                    text.set_text(content[1:])
-    
-    # 7. 确保顶部f(x)值正确显示
-    # 删除所有旧的f(x)文本
-    for text in ax.findobj(match=plt.Text):
-        if "f(x)" in text.get_text().lower() or "e[f(x)]" in text.get_text().lower():
-            text.set_visible(False)
-    
-    # 添加新的f(x)值
-    ax.text(0.5, 1.02, f"f(x) = {pred:.2f}", 
-            transform=ax.transAxes, 
-            ha='center',
-            fontsize=14, 
-            fontweight='bold',
-            color='red',
-            fontproperties=font_manager.FontProperties(
-                family='Microsoft YaHei'
-            ))
-    
-    # 8. 确保特征名称正确显示
-    # 强制设置Y轴标签字体
-    for label in ax.get_yticklabels():
-        label.set_fontproperties(font_manager.FontProperties(
-            family='Microsoft YaHei',
-            size=11
-        ))
-    # >>>>>>> 修复结束 <<<<<<<
-    
+    # 保持原样，不修改任何文本
     plt.tight_layout()
     st.pyplot(fig)
 
@@ -186,15 +90,6 @@ with col3:
         matplotlib=False
     )
     components.html(shap.getjs() + force_plot.html(), height=400)
-
-# 调试信息
-st.sidebar.markdown("### 修复状态")
-st.sidebar.write("**已修复问题：**")
-st.sidebar.write("✓ 中文特征名称乱码")
-st.sidebar.write("✓ 横坐标数值多余正号")
-st.sidebar.write("✓ 上边重叠数字删除")
-st.sidebar.write("✓ 负号保留")
-st.sidebar.write(f"当前字体: {plt.rcParams['font.family']}")
 
 
 
