@@ -11,26 +11,33 @@ from matplotlib import font_manager
 # ------------------ 页面配置 ------------------
 st.set_page_config(page_title="行走步态-膝关节接触力预测", layout="wide")
 
-# ------------------ 中文字体设置（仅使用SimHei）------------------
+# ------------------ 中文字体设置 ------------------
 try:
-    # 字体路径设置
     font_path = os.path.join(os.path.dirname(__file__), "SimHei.ttf")
-    
     if os.path.exists(font_path):
-        # 注册并强制使用SimHei字体
         font_prop = font_manager.FontProperties(fname=font_path)
         font_manager.fontManager.addfont(font_path)
-        plt.rcParams['font.family'] = 'SimHei'
+        plt.rcParams['font.sans-serif'] = ['SimHei']
+        plt.rcParams['font.family'] = 'sans-serif'
         st.success("SimHei字体加载成功")
     else:
-        st.error("未找到SimHei.ttf字体文件，请确保文件存在")
-        plt.rcParams['font.family'] = 'SimHei'  # 仍然尝试使用
-    
+        st.warning("未找到SimHei.ttf字体文件")
+        plt.rcParams['font.sans-serif'] = ['SimHei']
 except Exception as e:
     st.error(f"字体加载失败: {str(e)}")
-    plt.rcParams['font.family'] = 'SimHei'  # 强制回退尝试
 
-plt.rcParams['axes.unicode_minus'] = False  # 解决负号显示问题
+# 仅设置支持的rcParams参数
+valid_rc_params = {
+    'font.sans-serif': ['SimHei'],
+    'axes.unicode_minus': False,
+    'figure.dpi': 120,
+    'font.size': 12,
+    'axes.titlesize': 12,
+    'axes.labelsize': 12,
+    'xtick.labelsize': 11,
+    'ytick.labelsize': 11
+}
+plt.rcParams.update({k: v for k, v in valid_rc_params.items() if k in plt.rcParams})
 
 # ------------------ 页面标题 ------------------
 st.markdown("<h1 style='text-align: center; color: darkred; margin-bottom: 30px;'>行走步态-膝关节接触力预测</h1>", unsafe_allow_html=True)
@@ -79,7 +86,7 @@ with col2:
     st.markdown(f"<h3 style='color:darkgreen;'>预测结果</h3>", unsafe_allow_html=True)
     st.markdown(f"<p style='color:blue; font-size:40px; font-weight:bold;'>膝关节接触力: {pred:.2f}</p>", unsafe_allow_html=True)
 
-# -------- SHAP 可视化（仅使用SimHei字体）--------
+# -------- SHAP 可视化 --------
 with col3:
     explainer = shap.TreeExplainer(model)
     shap_values = explainer(X_input)
@@ -94,37 +101,20 @@ with col3:
     # 瀑布图
     st.markdown("<h3 style='color:darkorange;'>特征影响分析（瀑布图）</h3>", unsafe_allow_html=True)
     
-    # 1. 设置全局绘图参数（强制SimHei）
-    plt.rcParams.update({
-        'font.family': 'SimHei',   # 强制指定
-        'font.size': 12,           # 基础字号
-        'axes.titlesize': 13,      # 标题
-        'axes.labelsize': 12,      # 轴标签
-        'xtick.labelsize': 11,     # X轴刻度
-        'ytick.labelsize': 11,     # Y轴刻度
-        'figure.dpi': 120          # 提高清晰度
-    })
-    
-    # 2. 创建图形
     fig, ax = plt.subplots(figsize=(10, 6))
+    shap.plots.waterfall(shap_expl, show=False)
     
-    # 3. 绘制SHAP瀑布图
-    shap.plots.waterfall(shap_expl, show=False, max_display=10)
-    
-    # 4. 强制所有文本使用SimHei
-    for text in ax.findobj(match=plt.Text):
+    # 手动设置字体
+    for item in ax.findobj(match=plt.Text):
         try:
-            text.set_fontproperties(font_manager.FontProperties(
+            item.set_fontproperties(font_manager.FontProperties(
                 family='SimHei',
-                size=12 if "=" not in text.get_text() else 11  # 特征值稍小
+                size=12
             ))
-            if "f(x)" in text.get_text():  # 顶部基准值
-                text.set_fontsize(13)
         except:
             continue
     
-    # 5. 优化布局
-    plt.tight_layout(pad=2.5)
+    plt.tight_layout()
     st.pyplot(fig)
 
     # 力图
@@ -138,7 +128,7 @@ with col3:
     )
     components.html(shap.getjs() + force_plot.html(), height=400)
 
-# 字体检查
-st.sidebar.markdown("### 字体状态")
-st.sidebar.write(f"当前字体: {plt.rcParams['font.family']}")
-st.sidebar.write(f"字体路径: {font_path}")
+# 调试信息
+st.sidebar.markdown("### 系统状态")
+st.sidebar.write(f"Matplotlib版本: {matplotlib.__version__}")
+st.sidebar.write(f"当前字体: {plt.rcParams['font.sans-serif']}")
