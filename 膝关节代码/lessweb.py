@@ -3,16 +3,25 @@ import joblib
 import numpy as np
 import shap
 import matplotlib.pyplot as plt
+from matplotlib import font_manager
 import streamlit.components.v1 as components
 
 # ------------------ 页面配置 ------------------
 st.set_page_config(page_title="行走步态-膝关节接触力预测", layout="wide")
 
-# ------------------ 全局字体设置 ------------------
+# ------------------ 双字体设置 ------------------
+# 中文字体文件路径
+font_path = "fonts/SimHei.ttf"
+my_cn_font = font_manager.FontProperties(fname=font_path)
+
+# 英文字体系统自带
+my_en_font = "DejaVu Sans"
+
+# 字体优先列表：遇到中文用 SimHei，英文数字符号用 DejaVu Sans
+plt.rcParams['font.family'] = [my_cn_font.get_name(), my_en_font]
+plt.rcParams['axes.unicode_minus'] = False
 plt.rcParams['font.size'] = 12
 plt.rcParams['font.weight'] = 'bold'
-plt.rcParams['font.sans-serif'] = ['SimHei', 'Arial']  # 中文 + 英文
-plt.rcParams['axes.unicode_minus'] = False            # 负号正常显示
 
 # ------------------ 页面标题 ------------------
 st.markdown(
@@ -23,9 +32,9 @@ st.markdown(
 # ------------------ 加载模型 ------------------
 model = joblib.load("final_XGJ_model.bin")
 
-# ------------------ 定义特征名称 ------------------
-feature_names = ["膝内收角度(°)","体重(kg)","身高(cm)","BMI",
-                 "步行速度(m/s)","足底触地速度(m/s)","年龄","性别"]
+# ------------------ 特征名称 ------------------
+feature_names = ["膝内收角度","体重","身高","BMI",
+                 "步行速度","足底触地速度","年龄","性别"]
 
 # ------------------ 页面布局 ------------------
 col1, col2, col3 = st.columns([1.2, 1.2, 2.5])
@@ -79,13 +88,13 @@ with col3:
     )
 
     # ---------------- 瀑布图 ----------------
-    st.markdown("<h3 style='color:darkorange;'>Waterfall Plot</h3>", unsafe_allow_html=True)
-    plt.clf()  # 清空旧 figure，防止重影
+    st.markdown("<h3 style='color:darkorange;'>瀑布图</h3>", unsafe_allow_html=True)
+    plt.clf()  # 清空旧图，防止重影
     shap.plots.waterfall(shap_expl, show=False)
-    st.pyplot(plt.gcf())  # 显示当前 figure
+    st.pyplot(plt.gcf())
 
     # ---------------- 力图 ----------------
-    st.markdown("<h3 style='color:purple;'>Force Plot</h3>", unsafe_allow_html=True)
+    st.markdown("<h3 style='color:purple;'>力图</h3>", unsafe_allow_html=True)
     force_plot = shap.force_plot(
         explainer.expected_value, 
         shap_values.values[0], 
