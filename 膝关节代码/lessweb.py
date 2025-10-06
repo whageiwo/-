@@ -10,7 +10,7 @@ import streamlit.components.v1 as components
 st.set_page_config(page_title="数据图表分析", layout="wide")
 
 # ------------------ 中文字体 + 负号 ------------------
-matplotlib.rcParams['font.sans-serif'] = ['Microsoft YaHei']  # 微软雅黑
+
 matplotlib.rcParams['axes.unicode_minus'] = False  # 负号显示正常
 
 # ------------------ 页面标题 ------------------
@@ -82,4 +82,5 @@ with col3:
         explainer.expected_value, shap_values.values[0], X_input[0], feature_names=feature_names
     )
     components.html(f"<head>{shap.getjs()}</head>{force_plot.html()}", height=300) 
+
 
