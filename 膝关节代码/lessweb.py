@@ -75,22 +75,48 @@ with col2:
         unsafe_allow_html=True
     )
 
-# -------- 右列：SHAP 可视化 --------
+# ---------------- 右列：SHAP 可视化 ----------------
 with col3:
+    import matplotlib.pyplot as plt
+    from matplotlib import font_manager
+    import shap
+    import streamlit.components.v1 as components
+
+    # ---------------- 字体设置 ----------------
+    font_path = "SimHei.ttf"
+    my_cn_font = font_manager.FontProperties(fname=font_path)
+    plt.rcParams['font.family'] = [my_cn_font.get_file(), "DejaVu Sans"]
+    plt.rcParams['axes.unicode_minus'] = False
+    plt.rcParams['font.size'] = 12
+
+    # ---------------- SHAP 解释器 ----------------
     explainer = shap.TreeExplainer(model)
     shap_values = explainer(X_input)
 
+    # 创建 Explanation 对象，中文特征名
+    feature_names_str = [str(f) for f in feature_names]
     shap_expl = shap.Explanation(
         values=shap_values.values[0],
         base_values=shap_values.base_values[0],
         data=X_input[0],
-        feature_names=feature_names
+        feature_names=feature_names_str
     )
 
     # ---------------- 瀑布图 ----------------
     st.markdown("<h3 style='color:darkorange;'>瀑布图</h3>", unsafe_allow_html=True)
-    plt.clf()  # 清空旧图，防止重影
-    shap.plots.waterfall(shap_expl, show=False)
+    plt.figure(figsize=(12, 6))
+    shap.plots.waterfall(shap_expl, show=False, max_display=20)
+
+    # 手动在顶部显示 base value
+    plt.gca().text(
+        x=0, y=1.02,
+        s=f"Base Value: {shap_expl.base_values:.2f}",
+        transform=plt.gca().transAxes,
+        fontsize=12,
+        color='red'
+    )
+
+    plt.tight_layout()
     st.pyplot(plt.gcf())
 
     # ---------------- 力图 ----------------
@@ -99,10 +125,10 @@ with col3:
         explainer.expected_value, 
         shap_values.values[0], 
         X_input[0], 
-        feature_names=feature_names
+        feature_names=feature_names_str
     )
     components.html(
         f"<head>{shap.getjs()}</head>{force_plot.html()}", 
-        height=300
+        height=350
     )
 
