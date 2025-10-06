@@ -84,7 +84,7 @@ with col3:
     st.markdown("<h3 style='color:darkorange;'>特征影响分析（瀑布图）</h3>", unsafe_allow_html=True)
     
     # 1. 创建图形
-    fig, ax = plt.subplots(figsize=(10, 6))
+    fig, ax = plt.subplots(figsize=(10, 8))
     
     # 2. 绘制SHAP瀑布图
     shap.plots.waterfall(shap_expl, show=False)
@@ -118,3 +118,4 @@ with col3:
 # 字体检查
 st.sidebar.markdown("### 字体状态")
 st.sidebar.write(f"当前字体: {plt.rcParams['font.family']}")
+
