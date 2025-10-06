@@ -11,10 +11,11 @@ from matplotlib import font_manager
 st.set_page_config(page_title="行走步态-膝关节接触力预测", layout="wide")
 
 # ------------------ 中文字体 + 负号 ------------------
-# 优先使用微软雅黑
+# 使用微软雅黑，保证中英文及负号显示正常
 font_path = font_manager.findfont('Microsoft YaHei', fallback_to_default=True)
+prop = font_manager.FontProperties(fname=font_path)
 matplotlib.rcParams['font.sans-serif'] = ['Microsoft YaHei']
-matplotlib.rcParams['axes.unicode_minus'] = False  # 解决负号显示问题
+matplotlib.rcParams['axes.unicode_minus'] = False  # 负号显示正常
 
 # ------------------ 页面标题 ------------------
 st.markdown("<h1 style='text-align: center; color: darkred; margin-bottom: 30px;'>行走步态-膝关节接触力预测</h1>", unsafe_allow_html=True)
@@ -57,7 +58,7 @@ X_input = np.array([inputs])
 # -------- 预测结果 --------
 pred = model.predict(X_input)[0]  # 计算预测值
 
-# 直接显示预测值，不进行风险分类
+# 直接显示预测值
 with col2:
     st.markdown("<hr>", unsafe_allow_html=True)
     st.markdown(f"<h3 style='color:darkgreen;'>预测结果</h3>", unsafe_allow_html=True)
@@ -78,8 +79,13 @@ with col3:
     st.markdown("<h3 style='color:darkorange;'>特征影响分析（瀑布图）</h3>", unsafe_allow_html=True)
     fig1, ax1 = plt.subplots(figsize=(6,6))
     shap.plots.waterfall(shap_expl, show=False)
-    # 强制标题中文显示
-    plt.title("特征影响瀑布图", fontproperties=font_manager.FontProperties(fname=font_path), fontsize=14)
+
+    # 修复中文显示 + 保留 f(x)
+    for txt in ax1.texts:
+        txt.set_fontproperties(prop)
+    if hasattr(ax1, 'set_title'):
+        ax1.set_title(ax1.get_title(), fontproperties=prop, fontsize=14)
+
     plt.tight_layout()
     st.pyplot(fig1)
 
@@ -90,7 +96,7 @@ with col3:
         shap_values.values[0],
         X_input[0],
         feature_names=feature_names,
-        matplotlib=False  # 使用HTML渲染
+        matplotlib=False
     )
     components.html(shap.getjs() + force_plot.html(), height=400)
 
