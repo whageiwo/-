@@ -86,20 +86,29 @@ with col3:
         feature_names=feature_names
     )
 
-    # 瀑布图（修改后的版本）
-    st.markdown("<h3 style='color:darkorange;'>特征影响分析（瀑布图）</h3>", unsafe_allow_html=True)
-    
-    # 创建图形并设置字体
-    fig, ax = plt.subplots(figsize=(6, 6))
-    shap.plots.waterfall(shap_expl, show=False)
-    
-    # 手动设置所有文本的字体属性
-    for item in ax.findobj(match=plt.Text):
-        try:
-            if os.path.exists(font_path):
-                item.set_fontproperties(font_manager.FontProperties(fname=font_path))
-        except:
-            pass
+  # 瀑布图（修复重影版本）
+st.markdown("<h3 style='color:darkorange;'>特征影响分析（瀑布图）</h3>", unsafe_allow_html=True)
+
+fig, ax = plt.subplots(figsize=(6, 6))
+shap.plots.waterfall(shap_expl, show=False)
+
+# 修复重影的核心代码：移除重复文本
+seen_texts = set()
+for text in ax.findobj(match=plt.Text):
+    txt = text.get_text()
+    if txt in seen_texts:
+        text.set_visible(False)  # 隐藏重复文本
+    else:
+        seen_texts.add(txt)
+        # 统一设置字体属性
+        if os.path.exists(font_path):
+            text.set_fontproperties(font_manager.FontProperties(
+                fname=font_path,
+                size=10
+            ))
+
+plt.tight_layout()
+st.pyplot(fig)
     
     plt.tight_layout()
     st.pyplot(fig)
@@ -119,3 +128,4 @@ with col3:
 st.sidebar.markdown("### 字体状态检查")
 st.sidebar.write(f"字体路径: {font_path if 'font_path' in locals() else '未设置'}")
 st.sidebar.write(f"当前字体: {plt.rcParams['font.family']}")
+
