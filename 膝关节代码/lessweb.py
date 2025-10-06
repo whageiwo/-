@@ -18,18 +18,18 @@ try:
         font_prop = font_manager.FontProperties(fname=font_path)
         font_manager.fontManager.addfont(font_path)
         plt.rcParams['font.sans-serif'] = ['SimHei']
-        plt.rcParams['font.family'] = 'sans-serif'
+        plt.rcParams['axes.unicode_minus'] = False  # 正常显示负号
         st.success("SimHei字体加载成功")
     else:
-        st.warning("未找到SimHei.ttf字体文件")
-        plt.rcParams['font.sans-serif'] = ['SimHei']
+        st.warning("未找到SimHei.ttf字体文件，尝试使用系统默认中文字体")
+        plt.rcParams['font.sans-serif'] = ['SimHei', 'DejaVu Sans', 'Bitstream Vera Sans']
+        plt.rcParams['axes.unicode_minus'] = False
 except Exception as e:
     st.error(f"字体加载失败: {str(e)}")
+    plt.rcParams['axes.unicode_minus'] = False
 
-# 仅设置支持的rcParams参数
+# 设置绘图参数
 valid_rc_params = {
-    'font.sans-serif': ['SimHei'],
-    'axes.unicode_minus': False,
     'figure.dpi': 120,
     'font.size': 12,
     'axes.titlesize': 12,
@@ -43,44 +43,53 @@ plt.rcParams.update({k: v for k, v in valid_rc_params.items() if k in plt.rcPara
 st.markdown("<h1 style='text-align: center; color: darkred; margin-bottom: 30px;'>行走步态-膝关节接触力预测</h1>", unsafe_allow_html=True)
 
 # ------------------ 加载回归模型 ------------------
-model = joblib.load("final_XGJ_model.bin")
+try:
+    model = joblib.load("final_XGJ_model.bin")
+except Exception as e:
+    st.error(f"模型加载失败: {e}")
+    st.stop()
 
 # ------------------ 特征 ------------------
-feature_names = ["膝内收角度(°)","体重(kg)","身高(cm)","BMI",
-                 "步行速度(m/s)","足底触地速度(m/s)","年龄","性别"]
+feature_names = ["膝内收角度(°)", "体重(kg)", "身高(cm)", "BMI",
+                 "步行速度(m/s)", "足底触地速度(m/s)", "年龄", "性别"]
 
 # ------------------ 页面布局 ------------------
 col1, col2, col3 = st.columns([1.5, 1.5, 2])
 inputs = []
 
-# 左列输入
+# 左列输入：前5个特征
 with col1:
     for name in feature_names[:5]:
         st.markdown(f"<p style='font-size:16px'>{name}</p>", unsafe_allow_html=True)
         if name == "性别":
-            val = st.radio("", [0,1], key=name, help="0:女性,1:男性")
+            val = st.radio("", [0, 1], key=name, help="0:女性, 1:男性")
         else:
             val = st.number_input("", value=0.0, step=0.1, format="%.2f", key=name)
         inputs.append(val)
 
-# 右列输入
+# 右列输入：后3个特征（注意：feature_names[5:] 是 ['足底触地速度(m/s)', '年龄', '性别']）
 with col2:
     for name in feature_names[5:]:
         st.markdown(f"<p style='font-size:16px'>{name}</p>", unsafe_allow_html=True)
         if name == "性别":
-            val = st.radio("", [0,1], key=name, help="0:女性,1:男性")
+            val = st.radio("", [0, 1], key=f"{name}_2", help="0:女性, 1:男性")  # 避免 key 冲突
         elif name == "年龄":
             val = st.number_input("", value=30, step=1, format="%d", key=name)
         else:
             val = st.number_input("", value=0.0, step=0.1, format="%.2f", key=name)
         inputs.append(val)
 
+# 构造输入数组
 X_input = np.array([inputs])
 
 # -------- 预测结果 --------
-pred = model.predict(X_input)[0]
+try:
+    pred = model.predict(X_input)[0]
+except Exception as e:
+    st.error(f"预测出错: {e}")
+    st.stop()
 
-# 直接显示预测值
+# 显示预测结果（放在 col2 底部）
 with col2:
     st.markdown("<hr>", unsafe_allow_html=True)
     st.markdown(f"<h3 style='color:darkgreen;'>预测结果</h3>", unsafe_allow_html=True)
@@ -88,96 +97,57 @@ with col2:
 
 # -------- SHAP 可视化 --------
 with col3:
-    explainer = shap.TreeExplainer(model)
-    shap_values = explainer(X_input)
+    try:
+        explainer = shap.TreeExplainer(model)
+        shap_values = explainer(X_input)
+    except Exception as e:
+        st.error(f"SHAP 解释器初始化失败: {e}")
+        st.stop()
 
-    # 创建自定义的Explanation对象
-    shap_expl = shap.Explanation(
-        values=shap_values.values[0],
-        base_values=explainer.expected_value,
-        data=X_input[0],
-        feature_names=feature_names
-    )
-
-    # 瀑布图 - 完全重新绘制的方法
     st.markdown("<h3 style='color:darkorange;'>特征影响分析（瀑布图）</h3>", unsafe_allow_html=True)
     
-    # 方法1：使用HTML方式显示，避免matplotlib问题
-    try:
-        # 先尝试使用HTML方式（更稳定）
-        waterfall_html = shap.plots.waterfall(shap_expl, max_display=10, show=False)
-        components.html(shap.getjs() + waterfall_html, height=600)
-    except:
-        # 如果HTML方式失败，使用matplotlib但进行彻底清理
-        fig, ax = plt.subplots(figsize=(12, 8))
-        
-        # 清除所有现有文本
-        ax.clear()
-        
-        # 重新绘制瀑布图
-        shap.plots.waterfall(shap_expl, max_display=10, show=False)
-        
-        # 手动清理重复的文本
-        for text in ax.texts:
-            text_text = text.get_text()
-            # 删除重复的数值文本
-            if '=' in text_text and text.get_position()[0] > 0.5:
-                text.set_visible(False)
-        
-        # 添加正确的标题
-        plt.title(f"f(x) = {pred:.2f}", fontsize=14, pad=20)
-        
-        plt.tight_layout()
-        st.pyplot(fig)
-
-    # 方法2：使用条形图重新创建（如果上述方法仍有问题）
-    st.markdown("<h4 style='color:darkorange;'>替代可视化（条形图）</h4>", unsafe_allow_html=True)
+    # 使用旧版 shap.waterfall_plot（保留 f(x) 标签，避免重复）
+    fig, ax = plt.subplots(figsize=(10, 6))
     
-    # 创建SHAP值的条形图
-    fig2, ax2 = plt.subplots(figsize=(10, 6))
-    
-    # 获取特征重要性排序
-    feature_order = np.argsort(np.abs(shap_values.values[0]))[::-1]
-    
-    # 准备数据
-    features_sorted = [feature_names[i] for i in feature_order]
-    values_sorted = [shap_values.values[0][i] for i in feature_order]
-    data_sorted = [X_input[0][i] for i in feature_order]
-    
-    # 创建条形图
-    colors = ['red' if x > 0 else 'blue' for x in values_sorted]
-    y_pos = np.arange(len(features_sorted))
-    
-    bars = ax2.barh(y_pos, values_sorted, color=colors, alpha=0.7)
-    ax2.set_yticks(y_pos)
-    ax2.set_yticklabels([f"{name} = {val}" for name, val in zip(features_sorted, data_sorted)])
-    ax2.set_xlabel('SHAP值（对预测的影响）')
-    ax2.set_title(f'特征影响分析 - f(x) = {pred:.2f} | 基准值 = {explainer.expected_value:.2f}')
-    
-    # 添加数值标签
-    for i, (bar, value) in enumerate(zip(bars, values_sorted)):
-        width = bar.get_width()
-        ax2.text(width if width > 0 else width - 0.1, 
-                bar.get_y() + bar.get_height()/2, 
-                f'{value:+.2f}', 
-                ha='left' if width > 0 else 'right', 
-                va='center')
-    
-    plt.tight_layout()
-    st.pyplot(fig2)
-
-    # 原有力图
-    st.markdown("<h3 style='color:purple;'>决策力图示</h3>", unsafe_allow_html=True)
-    force_plot = shap.force_plot(
-        explainer.expected_value,
-        shap_values.values[0],
-        X_input[0],
-        feature_names=feature_names,
-        matplotlib=False
+    shap.waterfall_plot(
+        shap.Explanation(
+            values=shap_values.values[0],
+            base_values=shap_values.base_values[0],
+            data=X_input[0],
+            feature_names=feature_names
+        ),
+        max_display=len(feature_names),
+        show=False,
+        matplotlib=True
     )
-    components.html(shap.getjs() + force_plot.html(), height=400)
+    
+    # 获取当前 axes 并设置中文字体
+    ax = plt.gca()
+    for txt in ax.texts:
+        try:
+            txt.set_fontproperties(font_manager.FontProperties(family='SimHei', size=12))
+        except:
+            pass
+
+    plt.tight_layout()
+    st.pyplot(fig)
+
+    # 力图（Force Plot）
+    st.markdown("<h3 style='color:purple;'>决策力图示</h3>", unsafe_allow_html=True)
+    try:
+        force_plot = shap.force_plot(
+            explainer.expected_value,
+            shap_values.values[0],
+            X_input[0],
+            feature_names=feature_names,
+            matplotlib=False
+        )
+        components.html(shap.getjs() + force_plot.html(), height=400, scrolling=True)
+    except Exception as e:
+        st.warning(f"力图生成失败（可能因 SHAP 版本问题）: {e}")
 
 # 调试信息
 st.sidebar.markdown("### 系统状态")
 st.sidebar.write(f"Matplotlib版本: {matplotlib.__version__}")
+st.sidebar.write(f"SHAP版本: {shap.__version__}")
 st.sidebar.write(f"当前字体: {plt.rcParams['font.sans-serif']}")
