@@ -91,28 +91,27 @@ with col3:
     explainer = shap.TreeExplainer(model)
     shap_values = explainer(X_input)
 
+    # 创建自定义的Explanation对象
     shap_expl = shap.Explanation(
         values=shap_values.values[0],
-        base_values=shap_values.base_values[0],
+        base_values=explainer.expected_value,
         data=X_input[0],
         feature_names=feature_names
     )
 
-    # 瀑布图
+    # 瀑布图 - 修复版本
     st.markdown("<h3 style='color:darkorange;'>特征影响分析（瀑布图）</h3>", unsafe_allow_html=True)
     
     fig, ax = plt.subplots(figsize=(10, 6))
-    shap.plots.waterfall(shap_expl, show=False)
+    shap.plots.waterfall(shap_expl, max_display=10, show=False)
     
-    # 手动设置字体
-    for item in ax.findobj(match=plt.Text):
-        try:
-            item.set_fontproperties(font_manager.FontProperties(
-                family='SimHei',
-                size=12
-            ))
-        except:
-            continue
+    # 手动调整图表元素
+    ax.set_title(f"f(x) = {pred:.2f}", fontproperties=font_prop)
+    
+    # 修复重复显示问题
+    for text in ax.texts:
+        if '=' in text.get_text():
+            text.set_visible(False)
     
     plt.tight_layout()
     st.pyplot(fig)
