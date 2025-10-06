@@ -72,7 +72,7 @@ with col3:
     st.markdown("<h3 style='color:darkorange;'>特征影响分析（瀑布图）</h3>", unsafe_allow_html=True)
     
     # 创建图形（根据图片尺寸调整）
-    fig, ax = plt.subplots(figsize=(10, 6))
+    fig, ax = plt.subplots(figsize=(8, 8))
     
     # 绘制SHAP瀑布图（使用默认设置）
     shap.plots.waterfall(shap_expl, show=False)
@@ -96,4 +96,5 @@ with col3:
 st.sidebar.markdown("### 图表信息")
 st.sidebar.write(f"预测值: {pred:.2f}")
 st.sidebar.write(f"基准值: {shap_values.base_values[0]:.2f}")
+
 
