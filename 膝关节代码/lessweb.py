@@ -59,7 +59,6 @@ with col2:
     st.markdown(f"<h3 style='color:darkgreen;'>预测结果</h3>", unsafe_allow_html=True)
     st.markdown(f"<p style='color:blue; font-size:40px; font-weight:bold;'>预测值: {pred:.2f}</p>", unsafe_allow_html=True)
 
-# -------- SHAP 可视化 --------
 with col3:
     explainer = shap.TreeExplainer(model)
     shap_values = explainer(X_input)
@@ -71,27 +70,16 @@ with col3:
         feature_names=feature_names
     )
 
-    st.markdown("<h3 style='color:darkorange;'>特征影响分析（瀑布图）</h3>", unsafe_allow_html=True)
-    fig, ax = plt.subplots(figsize=(8,8))
-
-    # 绘制SHAP瀑布图（保留默认base value，不重复显示）
+    # 瀑布图
+    st.markdown("<h3 style='color:darkorange;'>Waterfall Plot</h3>", unsafe_allow_html=True)
+    fig, ax = plt.subplots(figsize=(6,6))
     shap.plots.waterfall(shap_expl, show=False)
-
-    plt.tight_layout()
     st.pyplot(fig)
 
-    # 力图
-    st.markdown("<h3 style='color:purple;'>决策力图示</h3>", unsafe_allow_html=True)
+    # 力图 (Streamlit 显示)
+    st.markdown("<h3 style='color:purple;'>Force Plot</h3>", unsafe_allow_html=True)
     force_plot = shap.force_plot(
-        explainer.expected_value,
-        shap_values.values[0],
-        X_input[0],
-        feature_names=feature_names,
-        matplotlib=False
+        explainer.expected_value, shap_values.values[0], X_input[0], feature_names=feature_names
     )
-    components.html(shap.getjs() + force_plot.html(), height=400)
+    components.html(f"<head>{shap.getjs()}</head>{force_plot.html()}", height=300) 
 
-# ------------------ 调试信息 ------------------
-st.sidebar.markdown("### 图表信息")
-st.sidebar.write(f"预测值: {pred:.2f}")
-st.sidebar.write(f"基准值: {shap_values.base_values[0]:.2f}")
