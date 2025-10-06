@@ -75,7 +75,7 @@ with col3:
 
     # 瀑布图
     st.markdown("<h3 style='color:darkorange;'>Waterfall Plot</h3>", unsafe_allow_html=True)
-    fig, ax = plt.subplots(figsize=(6,6))
+    fig, ax = plt.subplots(figsize=(8,8))
     shap.plots.waterfall(shap_expl, show=False)
     st.pyplot(fig)
 
@@ -85,6 +85,7 @@ with col3:
         explainer.expected_value, shap_values.values[0], X_input[0], feature_names=feature_names
     )
     components.html(f"<head>{shap.getjs()}</head>{force_plot.html()}", height=300) 
+
 
 
 
