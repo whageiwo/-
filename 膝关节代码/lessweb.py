@@ -82,39 +82,35 @@ with col3:
     import shap
     import streamlit.components.v1 as components
 
-    # ---------------- 字体设置 ----------------
-    font_path = "SimHei.ttf"
+    # ---------------- 中文字体设置 ----------------
+    font_path = "SimHei.ttf"  # 已上传到项目根目录
     my_cn_font = font_manager.FontProperties(fname=font_path)
-    plt.rcParams['font.family'] = [my_cn_font.get_file(), "DejaVu Sans"]
-    plt.rcParams['axes.unicode_minus'] = False
-    plt.rcParams['font.size'] = 12
 
     # ---------------- SHAP 解释器 ----------------
     explainer = shap.TreeExplainer(model)
     shap_values = explainer(X_input)
 
-    # 创建 Explanation 对象，中文特征名
-    feature_names_str = [str(f) for f in feature_names]
+    # 中文特征名
+    feature_names_cn = [str(f) for f in feature_names]
     shap_expl = shap.Explanation(
         values=shap_values.values[0],
         base_values=shap_values.base_values[0],
         data=X_input[0],
-        feature_names=feature_names_str
+        feature_names=feature_names_cn
     )
 
     # ---------------- 瀑布图 ----------------
     st.markdown("<h3 style='color:darkorange;'>瀑布图</h3>", unsafe_allow_html=True)
-    plt.figure(figsize=(12, 6))
-    shap.plots.waterfall(shap_expl, show=False, max_display=20)
-
-    # 手动在顶部显示 base value
-    plt.gca().text(
-        x=0, y=1.02,
-        s=f"Base Value: {shap_expl.base_values:.2f}",
-        transform=plt.gca().transAxes,
-        fontsize=12,
-        color='red'
+    plt.figure(figsize=(12,6))
+    shap.plots.waterfall(
+        shap_expl,
+        show=False,
+        max_display=20
     )
+
+    # 强制 matplotlib 渲染中文特征名
+    for text in plt.gca().texts:
+        text.set_fontproperties(my_cn_font)
 
     plt.tight_layout()
     st.pyplot(plt.gcf())
@@ -122,13 +118,13 @@ with col3:
     # ---------------- 力图 ----------------
     st.markdown("<h3 style='color:purple;'>力图</h3>", unsafe_allow_html=True)
     force_plot = shap.force_plot(
-        explainer.expected_value, 
-        shap_values.values[0], 
-        X_input[0], 
-        feature_names=feature_names_str
+        explainer.expected_value,
+        shap_values.values[0],
+        X_input[0],
+        feature_names=feature_names_cn
     )
     components.html(
-        f"<head>{shap.getjs()}</head>{force_plot.html()}", 
+        f"<head>{shap.getjs()}</head>{force_plot.html()}",
         height=350
     )
 
