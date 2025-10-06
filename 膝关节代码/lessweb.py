@@ -99,24 +99,74 @@ with col3:
         feature_names=feature_names
     )
 
-    # 瀑布图 - 修复版本
+    # 瀑布图 - 完全重新绘制的方法
     st.markdown("<h3 style='color:darkorange;'>特征影响分析（瀑布图）</h3>", unsafe_allow_html=True)
     
-    fig, ax = plt.subplots(figsize=(10, 6))
-    shap.plots.waterfall(shap_expl, max_display=10, show=False)
+    # 方法1：使用HTML方式显示，避免matplotlib问题
+    try:
+        # 先尝试使用HTML方式（更稳定）
+        waterfall_html = shap.plots.waterfall(shap_expl, max_display=10, show=False)
+        components.html(shap.getjs() + waterfall_html, height=600)
+    except:
+        # 如果HTML方式失败，使用matplotlib但进行彻底清理
+        fig, ax = plt.subplots(figsize=(12, 8))
+        
+        # 清除所有现有文本
+        ax.clear()
+        
+        # 重新绘制瀑布图
+        shap.plots.waterfall(shap_expl, max_display=10, show=False)
+        
+        # 手动清理重复的文本
+        for text in ax.texts:
+            text_text = text.get_text()
+            # 删除重复的数值文本
+            if '=' in text_text and text.get_position()[0] > 0.5:
+                text.set_visible(False)
+        
+        # 添加正确的标题
+        plt.title(f"f(x) = {pred:.2f}", fontsize=14, pad=20)
+        
+        plt.tight_layout()
+        st.pyplot(fig)
+
+    # 方法2：使用条形图重新创建（如果上述方法仍有问题）
+    st.markdown("<h4 style='color:darkorange;'>替代可视化（条形图）</h4>", unsafe_allow_html=True)
     
-    # 手动调整图表元素
-    ax.set_title(f"f(x) = {pred:.2f}", fontproperties=font_prop)
+    # 创建SHAP值的条形图
+    fig2, ax2 = plt.subplots(figsize=(10, 6))
     
-    # 修复重复显示问题
-    for text in ax.texts:
-        if '=' in text.get_text():
-            text.set_visible(False)
+    # 获取特征重要性排序
+    feature_order = np.argsort(np.abs(shap_values.values[0]))[::-1]
+    
+    # 准备数据
+    features_sorted = [feature_names[i] for i in feature_order]
+    values_sorted = [shap_values.values[0][i] for i in feature_order]
+    data_sorted = [X_input[0][i] for i in feature_order]
+    
+    # 创建条形图
+    colors = ['red' if x > 0 else 'blue' for x in values_sorted]
+    y_pos = np.arange(len(features_sorted))
+    
+    bars = ax2.barh(y_pos, values_sorted, color=colors, alpha=0.7)
+    ax2.set_yticks(y_pos)
+    ax2.set_yticklabels([f"{name} = {val}" for name, val in zip(features_sorted, data_sorted)])
+    ax2.set_xlabel('SHAP值（对预测的影响）')
+    ax2.set_title(f'特征影响分析 - f(x) = {pred:.2f} | 基准值 = {explainer.expected_value:.2f}')
+    
+    # 添加数值标签
+    for i, (bar, value) in enumerate(zip(bars, values_sorted)):
+        width = bar.get_width()
+        ax2.text(width if width > 0 else width - 0.1, 
+                bar.get_y() + bar.get_height()/2, 
+                f'{value:+.2f}', 
+                ha='left' if width > 0 else 'right', 
+                va='center')
     
     plt.tight_layout()
-    st.pyplot(fig)
+    st.pyplot(fig2)
 
-    # 力图
+    # 原有力图
     st.markdown("<h3 style='color:purple;'>决策力图示</h3>", unsafe_allow_html=True)
     force_plot = shap.force_plot(
         explainer.expected_value,
