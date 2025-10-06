@@ -11,33 +11,15 @@ from matplotlib import font_manager
 # ------------------ 页面配置 ------------------
 st.set_page_config(page_title="行走步态-膝关节接触力预测", layout="wide")
 
-# ------------------ 中文字体设置 ------------------
+# ------------------ 中文字体设置（使用微软雅黑）------------------
 try:
-    font_path = os.path.join(os.path.dirname(__file__), "SimHei.ttf")
-    if os.path.exists(font_path):
-        font_prop = font_manager.FontProperties(fname=font_path)
-        font_manager.fontManager.addfont(font_path)
-        plt.rcParams['font.sans-serif'] = ['SimHei']
-        plt.rcParams['font.family'] = 'sans-serif'
-        st.success("SimHei字体加载成功")
-    else:
-        st.warning("未找到SimHei.ttf字体文件")
-        plt.rcParams['font.sans-serif'] = ['SimHei']
+    # 设置全局字体为微软雅黑
+    plt.rcParams['font.family'] = 'Microsoft YaHei'
+    plt.rcParams['axes.unicode_minus'] = False  # 解决负号显示问题
+    st.success("微软雅黑字体设置成功")
 except Exception as e:
-    st.error(f"字体加载失败: {str(e)}")
-
-# 仅设置支持的rcParams参数
-valid_rc_params = {
-    'font.sans-serif': ['SimHei'],
-    'axes.unicode_minus': False,
-    'figure.dpi': 120,
-    'font.size': 12,
-    'axes.titlesize': 12,
-    'axes.labelsize': 12,
-    'xtick.labelsize': 11,
-    'ytick.labelsize': 11
-}
-plt.rcParams.update({k: v for k, v in valid_rc_params.items() if k in plt.rcParams})
+    st.error(f"字体设置失败: {str(e)}")
+    plt.rcParams['font.family'] = 'Microsoft YaHei'  # 强制回退
 
 # ------------------ 页面标题 ------------------
 st.markdown("<h1 style='text-align: center; color: darkred; margin-bottom: 30px;'>行走步态-膝关节接触力预测</h1>", unsafe_allow_html=True)
@@ -86,7 +68,7 @@ with col2:
     st.markdown(f"<h3 style='color:darkgreen;'>预测结果</h3>", unsafe_allow_html=True)
     st.markdown(f"<p style='color:blue; font-size:40px; font-weight:bold;'>膝关节接触力: {pred:.2f}</p>", unsafe_allow_html=True)
 
-# -------- SHAP 可视化 --------
+# -------- SHAP 可视化（使用微软雅黑字体）--------
 with col3:
     explainer = shap.TreeExplainer(model)
     shap_values = explainer(X_input)
@@ -101,16 +83,21 @@ with col3:
     # 瀑布图
     st.markdown("<h3 style='color:darkorange;'>特征影响分析（瀑布图）</h3>", unsafe_allow_html=True)
     
+    # 1. 创建图形
     fig, ax = plt.subplots(figsize=(10, 6))
+    
+    # 2. 绘制SHAP瀑布图
     shap.plots.waterfall(shap_expl, show=False)
     
-    # 手动设置字体
-    for item in ax.findobj(match=plt.Text):
+    # 3. 设置所有文本为微软雅黑
+    for text in ax.findobj(match=plt.Text):
         try:
-            item.set_fontproperties(font_manager.FontProperties(
-                family='SimHei',
-                size=12
+            text.set_fontproperties(font_manager.FontProperties(
+                family='Microsoft YaHei',
+                size=12 if "=" not in text.get_text() else 11
             ))
+            if "f(x)" in text.get_text():  # 顶部基准值
+                text.set_fontsize(13)
         except:
             continue
     
@@ -128,7 +115,6 @@ with col3:
     )
     components.html(shap.getjs() + force_plot.html(), height=400)
 
-# 调试信息
-st.sidebar.markdown("### 系统状态")
-st.sidebar.write(f"Matplotlib版本: {matplotlib.__version__}")
-st.sidebar.write(f"当前字体: {plt.rcParams['font.sans-serif']}")  
+# 字体检查
+st.sidebar.markdown("### 字体状态")
+st.sidebar.write(f"当前字体: {plt.rcParams['font.family']}")
