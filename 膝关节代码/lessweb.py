@@ -11,7 +11,7 @@ st.set_page_config(page_title="行走步态-膝关节接触力预测", layout="w
 
 # ------------------ 双字体设置 ------------------
 # 中文字体文件路径
-font_path = "fonts/SimHei.ttf"
+font_path = "SimHei.ttf"
 my_cn_font = font_manager.FontProperties(fname=font_path)
 
 # 英文字体系统自带
@@ -105,3 +105,4 @@ with col3:
         f"<head>{shap.getjs()}</head>{force_plot.html()}", 
         height=300
     )
+
