@@ -13,7 +13,7 @@ plt.rcParams['font.size'] = 12
 plt.rcParams['font.weight'] = 'bold'
 
 # ------------------ 页面标题 ------------------
-st.markdown("<h1 style='text-align: center; color: darkred; margin-bottom: 20px;'>行走步态-膝关节接触力预测</h1>", unsafe_allow_html=True)
+st.markdown("<h1 style='text-align: center; color: darkred; margin-bottom: 40px;'>行走步态-膝关节接触力预测</h1>", unsafe_allow_html=True)
 
 # ------------------ 加载模型 ------------------
 model = joblib.load("final_XGJ_model.bin")
@@ -85,6 +85,7 @@ with col3:
         explainer.expected_value, shap_values.values[0], X_input[0], feature_names=feature_names
     )
     components.html(f"<head>{shap.getjs()}</head>{force_plot.html()}", height=300) 
+
 
 
 
