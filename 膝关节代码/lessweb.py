@@ -5,17 +5,21 @@ import shap
 import matplotlib
 import matplotlib.pyplot as plt
 import streamlit.components.v1 as components
+import os
 from matplotlib import font_manager
 
 # ------------------ 页面配置 ------------------
 st.set_page_config(page_title="行走步态-膝关节接触力预测", layout="wide")
 
-# ------------------ 中文字体 + 负号 ------------------
-# 使用微软雅黑
-font_path = font_manager.findfont('Microsoft YaHei', fallback_to_default=True)
-prop = font_manager.FontProperties(fname=font_path)
-matplotlib.rcParams['font.sans-serif'] = ['Microsoft YaHei']
-matplotlib.rcParams['axes.unicode_minus'] = False  # 负号显示正常
+# ------------------ 中文字体设置（使用微软雅黑）------------------
+try:
+    # 设置全局字体为微软雅黑
+    plt.rcParams['font.family'] = 'Microsoft YaHei'
+    plt.rcParams['axes.unicode_minus'] = False  # 解决负号显示问题
+    st.success("微软雅黑字体设置成功")
+except Exception as e:
+    st.error(f"字体设置失败: {str(e)}")
+    plt.rcParams['font.family'] = 'Microsoft YaHei'  # 强制回退
 
 # ------------------ 页面标题 ------------------
 st.markdown("<h1 style='text-align: center; color: darkred; margin-bottom: 30px;'>行走步态-膝关节接触力预测</h1>", unsafe_allow_html=True)
@@ -56,7 +60,7 @@ with col2:
 X_input = np.array([inputs])
 
 # -------- 预测结果 --------
-pred = model.predict(X_input)[0]  # 计算预测值
+pred = model.predict(X_input)[0]
 
 # 直接显示预测值
 with col2:
@@ -64,10 +68,11 @@ with col2:
     st.markdown(f"<h3 style='color:darkgreen;'>预测结果</h3>", unsafe_allow_html=True)
     st.markdown(f"<p style='color:blue; font-size:40px; font-weight:bold;'>膝关节接触力: {pred:.2f}</p>", unsafe_allow_html=True)
 
-# -------- SHAP 可视化 --------
+# -------- SHAP 可视化（使用微软雅黑字体）--------
 with col3:
     explainer = shap.TreeExplainer(model)
     shap_values = explainer(X_input)
+
     shap_expl = shap.Explanation(
         values=shap_values.values[0],
         base_values=shap_values.base_values[0],
@@ -75,27 +80,31 @@ with col3:
         feature_names=feature_names
     )
 
-    # 瀑布图（使用 waterfall_legacy 解决中文 + f(x)）
+    # 瀑布图
     st.markdown("<h3 style='color:darkorange;'>特征影响分析（瀑布图）</h3>", unsafe_allow_html=True)
-    fig1, ax1 = plt.subplots(figsize=(6,6))
-
-    shap.plots._waterfall.waterfall_legacy(
-        expected_value=shap_expl.base_values,
-        shap_values=shap_expl.values,
-        features=shap_expl.data,
-        feature_names=shap_expl.feature_names,
-        max_display=20,
-        show=False
-    )
-
-    # 修复中文字体
-    for txt in ax1.texts:
-        txt.set_fontproperties(prop)
-
+    
+    # 1. 创建图形
+    fig, ax = plt.subplots(figsize=(10, 6))
+    
+    # 2. 绘制SHAP瀑布图
+    shap.plots.waterfall(shap_expl, show=False)
+    
+    # 3. 设置所有文本为微软雅黑
+    for text in ax.findobj(match=plt.Text):
+        try:
+            text.set_fontproperties(font_manager.FontProperties(
+                family='Microsoft YaHei',
+                size=12 if "=" not in text.get_text() else 11
+            ))
+            if "f(x)" in text.get_text():  # 顶部基准值
+                text.set_fontsize(13)
+        except:
+            continue
+    
     plt.tight_layout()
-    st.pyplot(fig1)
+    st.pyplot(fig)
 
-    # 力图 - 使用HTML渲染方式
+    # 力图
     st.markdown("<h3 style='color:purple;'>决策力图示</h3>", unsafe_allow_html=True)
     force_plot = shap.force_plot(
         explainer.expected_value,
@@ -106,5 +115,6 @@ with col3:
     )
     components.html(shap.getjs() + force_plot.html(), height=400)
 
-
-
+# 字体检查
+st.sidebar.markdown("### 字体状态")
+st.sidebar.write(f"当前字体: {plt.rcParams['font.family']}")
