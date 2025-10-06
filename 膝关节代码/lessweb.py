@@ -11,7 +11,7 @@ from matplotlib import font_manager
 # ------------------ 页面配置 ------------------
 st.set_page_config(page_title="行走步态-膝关节接触力预测", layout="wide")
 
-# ------------------ 中文字体设置（仅使用SimHei）------------------
+# ------------------ 中文字体设置 ------------------
 try:
     font_path = os.path.join(os.path.dirname(__file__), "SimHei.ttf")
     if os.path.exists(font_path):
@@ -73,7 +73,7 @@ with col2:
     st.markdown(f"<h3 style='color:darkgreen;'>预测结果</h3>", unsafe_allow_html=True)
     st.markdown(f"<p style='color:blue; font-size:40px; font-weight:bold;'>膝关节接触力: {pred:.2f}</p>", unsafe_allow_html=True)
 
-# -------- SHAP 可视化（修复重影）--------
+# -------- SHAP 可视化 --------
 with col3:
     explainer = shap.TreeExplainer(model)
     shap_values = explainer(X_input)
@@ -99,17 +99,17 @@ with col3:
     fig, ax = plt.subplots(figsize=(10, 6))
     shap.plots.waterfall(shap_expl, show=False, max_display=10)
 
-    # ✅ 删除重复的 f(x) 预测值文本（防止重影）
+    # ✅ 修复 f(x) 顶部重影问题：保留最上层一个 f(x)，隐藏重复
     texts = ax.findobj(match=plt.Text)
-    fx_labels = [(t, t.get_text()) for t in texts if "f(x)" in t.get_text()]
-    if len(fx_labels) > 1:
-        # 获取第一个f(x)的位置
-        base_pos = fx_labels[0][0].get_position()
-        for t, label in fx_labels[1:]:
-            if np.allclose(t.get_position(), base_pos, atol=0.01):  # 位置重复 → 删除
+    fx_texts = [t for t in texts if "f(x)" in t.get_text()]
+    if len(fx_texts) > 1:
+        # 取出y坐标最高的那一个作为保留
+        top_text = max(fx_texts, key=lambda t: t.get_position()[1])
+        for t in fx_texts:
+            if t is not top_text:
                 t.set_visible(False)
 
-    # ✅ 统一中文字体与负号
+    # ✅ 确保字体显示正常
     for text in texts:
         text.set_fontproperties(font_manager.FontProperties(family='SimHei', size=12))
     plt.rcParams['axes.unicode_minus'] = False
@@ -132,4 +132,3 @@ with col3:
 st.sidebar.markdown("### 字体状态")
 st.sidebar.write(f"当前字体: {plt.rcParams['font.family']}")
 st.sidebar.write(f"字体路径: {font_path}")
-
