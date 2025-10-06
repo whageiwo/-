@@ -13,22 +13,17 @@ st.set_page_config(page_title="行走步态-膝关节接触力预测", layout="w
 
 # ------------------ 中文字体设置（仅使用SimHei）------------------
 try:
-    # 字体路径设置
     font_path = os.path.join(os.path.dirname(__file__), "SimHei.ttf")
-    
     if os.path.exists(font_path):
-        # 注册并强制使用SimHei字体
-        font_prop = font_manager.FontProperties(fname=font_path)
         font_manager.fontManager.addfont(font_path)
         plt.rcParams['font.family'] = 'SimHei'
         st.success("SimHei字体加载成功")
     else:
         st.error("未找到SimHei.ttf字体文件，请确保文件存在")
-        plt.rcParams['font.family'] = 'SimHei'  # 仍然尝试使用
-    
+        plt.rcParams['font.family'] = 'SimHei'
 except Exception as e:
     st.error(f"字体加载失败: {str(e)}")
-    plt.rcParams['font.family'] = 'SimHei'  # 强制回退尝试
+    plt.rcParams['font.family'] = 'SimHei'
 
 plt.rcParams['axes.unicode_minus'] = False  # 解决负号显示问题
 
@@ -73,13 +68,12 @@ X_input = np.array([inputs])
 # -------- 预测结果 --------
 pred = model.predict(X_input)[0]
 
-# 直接显示预测值
 with col2:
     st.markdown("<hr>", unsafe_allow_html=True)
     st.markdown(f"<h3 style='color:darkgreen;'>预测结果</h3>", unsafe_allow_html=True)
     st.markdown(f"<p style='color:blue; font-size:40px; font-weight:bold;'>膝关节接触力: {pred:.2f}</p>", unsafe_allow_html=True)
 
-# -------- SHAP 可视化（仅使用SimHei字体）--------
+# -------- SHAP 可视化（修复重影）--------
 with col3:
     explainer = shap.TreeExplainer(model)
     shap_values = explainer(X_input)
@@ -91,9 +85,7 @@ with col3:
         feature_names=feature_names
     )
 
-    # ----------- 瀑布图部分（修正版） -----------
     st.markdown("<h3 style='color:darkorange;'>特征影响分析（瀑布图）</h3>", unsafe_allow_html=True)
-
     plt.rcParams.update({
         'font.family': 'SimHei',
         'font.size': 12,
@@ -107,20 +99,22 @@ with col3:
     fig, ax = plt.subplots(figsize=(10, 6))
     shap.plots.waterfall(shap_expl, show=False, max_display=10)
 
-    # ✅ 删除顶部重复预测值（重影问题核心修复）
+    # ✅ 删除重复的 f(x) 预测值文本（防止重影）
     texts = ax.findobj(match=plt.Text)
-    fx_texts = [t for t in texts if "f(x)" in t.get_text()]
-    if len(fx_texts) > 1:
-        for t in fx_texts[1:]:
-            t.set_visible(False)
-    ax.set_title("")  # 删除可能的标题层
+    fx_labels = [(t, t.get_text()) for t in texts if "f(x)" in t.get_text()]
+    if len(fx_labels) > 1:
+        # 获取第一个f(x)的位置
+        base_pos = fx_labels[0][0].get_position()
+        for t, label in fx_labels[1:]:
+            if np.allclose(t.get_position(), base_pos, atol=0.01):  # 位置重复 → 删除
+                t.set_visible(False)
 
-    # ✅ 统一字体，修复中文与负号
+    # ✅ 统一中文字体与负号
     for text in texts:
         text.set_fontproperties(font_manager.FontProperties(family='SimHei', size=12))
     plt.rcParams['axes.unicode_minus'] = False
-
     plt.tight_layout(pad=2.5)
+
     st.pyplot(fig)
 
     # 力图
@@ -138,3 +132,4 @@ with col3:
 st.sidebar.markdown("### 字体状态")
 st.sidebar.write(f"当前字体: {plt.rcParams['font.family']}")
 st.sidebar.write(f"字体路径: {font_path}")
+
