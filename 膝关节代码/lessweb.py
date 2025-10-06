@@ -8,12 +8,17 @@ import streamlit.components.v1 as components
 # ------------------ 页面配置 ------------------
 st.set_page_config(page_title="行走步态-膝关节接触力预测", layout="wide")
 
-# ------------------ 全局字体 ------------------
+# ------------------ 全局字体设置 ------------------
 plt.rcParams['font.size'] = 12
 plt.rcParams['font.weight'] = 'bold'
+plt.rcParams['font.sans-serif'] = ['SimHei', 'Arial']  # 中文 + 英文
+plt.rcParams['axes.unicode_minus'] = False            # 负号正常显示
 
 # ------------------ 页面标题 ------------------
-st.markdown("<h1 style='text-align: center; color: darkred; margin-bottom: 40px;'>行走步态-膝关节接触力预测</h1>", unsafe_allow_html=True)
+st.markdown(
+    "<h1 style='text-align: center; color: darkred; margin-bottom: 40px;'>行走步态-膝关节接触力预测</h1>",
+    unsafe_allow_html=True
+)
 
 # ------------------ 加载模型 ------------------
 model = joblib.load("final_XGJ_model.bin")
@@ -24,7 +29,6 @@ feature_names = ["膝内收角度(°)","体重(kg)","身高(cm)","BMI",
 
 # ------------------ 页面布局 ------------------
 col1, col2, col3 = st.columns([1.2, 1.2, 2.5])
-label_size = "16px"
 inputs = []
 
 # 左列输入
@@ -54,12 +58,13 @@ X_input = np.array([inputs])
 # -------- 预测结果 --------
 pred = model.predict(X_input)[0]
 
-# 直接显示预测值
 with col2:
     st.markdown("<hr>", unsafe_allow_html=True)
     st.markdown(f"<h3 style='color:darkgreen;'>预测结果</h3>", unsafe_allow_html=True)
-    st.markdown(f"<p style='color:blue; font-size:40px; font-weight:bold;'>膝关节接触力: {pred:.2f}</p>", unsafe_allow_html=True)
-
+    st.markdown(
+        f"<p style='color:blue; font-size:40px; font-weight:bold;'>膝关节接触力: {pred:.2f}</p>",
+        unsafe_allow_html=True
+    )
 
 # -------- 右列：SHAP 可视化 --------
 with col3:
@@ -73,15 +78,21 @@ with col3:
         feature_names=feature_names
     )
 
-    # 瀑布图
+    # ---------------- 瀑布图 ----------------
     st.markdown("<h3 style='color:darkorange;'>Waterfall Plot</h3>", unsafe_allow_html=True)
-    fig, ax = plt.subplots(figsize=(4,4))
+    plt.clf()  # 清空旧 figure，防止重影
     shap.plots.waterfall(shap_expl, show=False)
-    st.pyplot(fig)
+    st.pyplot(plt.gcf())  # 显示当前 figure
 
-    # 力图 (Streamlit 显示)
+    # ---------------- 力图 ----------------
     st.markdown("<h3 style='color:purple;'>Force Plot</h3>", unsafe_allow_html=True)
     force_plot = shap.force_plot(
-        explainer.expected_value, shap_values.values[0], X_input[0], feature_names=feature_names
+        explainer.expected_value, 
+        shap_values.values[0], 
+        X_input[0], 
+        feature_names=feature_names
     )
-    components.html(f"<head>{shap.getjs()}</head>{force_plot.html()}", height=300) 
+    components.html(
+        f"<head>{shap.getjs()}</head>{force_plot.html()}", 
+        height=300
+    )
